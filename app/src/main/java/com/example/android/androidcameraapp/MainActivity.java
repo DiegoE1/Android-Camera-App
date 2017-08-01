@@ -1,17 +1,22 @@
 package com.example.android.androidcameraapp;
 
+import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -21,13 +26,13 @@ public class MainActivity extends AppCompatActivity {
     // TODO: Create an app that can take pictures using Intents
     // todo:    You should have 1 Button that starts the camera
     // todo:    You should be able to open the Picture Gallery and see the images that were captured
+    // todo:  make call to update gallery
 
 
     private Button mTakePicture;
 
     private ImageView mImageView;
-    private String mCurrentPhotoPath;
-    private Bitmap mImageBitmap;
+    private File destination;
     private final int REQUEST_IMAGE_CAPTURE = 1;
 
 
@@ -39,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
         mTakePicture = (Button) findViewById(R.id.button_take_picture);
 
         mImageView = (ImageView) findViewById(R.id.image_view_picture);
+
 
         mTakePicture.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -52,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
 
                     }
                     if(photoFile != null) {
-                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(photoFile));
+                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(destination));
                         startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
                     }
                 }
@@ -60,33 +66,40 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private File createImageFile() throws IOException{
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
-        File storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-        File image = File.createTempFile(imageFileName, ".jpg", storageDir);
-
-        mCurrentPhotoPath = "file:" + image.getAbsolutePath();
-        return image;
-    }
-
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK){
             try{
-                mImageBitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), Uri.parse(mCurrentPhotoPath));
-                mImageView.setImageBitmap(mImageBitmap);
+                FileInputStream in = new FileInputStream(destination);
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inSampleSize = 10;
+                Bitmap userImage = BitmapFactory.decodeStream(in, null, options);
+                mImageView.setImageBitmap(userImage);
+                updateGallery(destination.getAbsolutePath(), MainActivity.this);
             }
-            catch (IOException e){
+            catch (Exception e){
                 e.printStackTrace();
             }
         }
     }
 
-    /*
-    public void openGallery(){
-        Intent i = new Intent (Intent.ACTION_PICK, MediaStore.Images.Media.INTERNAL_CONTENT_URI);
-        final int ACTIVITY_SELECT_IMAGE = 1234;
-        startActivityForResult(i, ACTIVITY_SELECT_IMAGE);
+    private File createImageFile() throws IOException{
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        destination = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), imageFileName);
+
+        return destination;
     }
-    */
+
+
+    public void updateGallery(String filePath, Context context){
+        ContentValues values = new ContentValues();
+
+        values.put(MediaStore.Images.Media.DATE_TAKEN, System.currentTimeMillis());
+        values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+        values.put(MediaStore.MediaColumns.DATA, filePath);
+        Log.d("filePath", filePath);
+
+        context.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+    }
+
 }
