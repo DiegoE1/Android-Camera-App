@@ -1,5 +1,6 @@
 package com.example.android.androidcameraapp;
 
+import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -50,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                takePictureIntent.setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                 if(takePictureIntent.resolveActivity(getPackageManager()) != null){
                     File photoFile = null;
                     try{
@@ -58,8 +60,12 @@ public class MainActivity extends AppCompatActivity {
 
                     }
                     if(photoFile != null) {
-                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(destination));
-                        startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+                        try {
+                            takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(destination));
+                            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
+                        } catch (ActivityNotFoundException e){
+                            e.printStackTrace();
+                        }
                     }
                 }
             }
@@ -84,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
 
     private File createImageFile() throws IOException{
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "JPEG_" + timeStamp + "_";
+        String imageFileName = "JPEG_" + timeStamp + ".jpg";
         destination = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), imageFileName);
 
         return destination;
